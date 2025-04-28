@@ -123,6 +123,7 @@ Use your UDAL username and password to finalise the connection.
     > # Load libraries
     > library(AzureStor)
     > library(AzureKeyVault)
+    > 
     > ## ---- Set Up 
     > ## this sets the secrets needed to connect to Azure (based on East of England advice December 24)
     > ## this file (along with config.py) is specifically referred to in gitignore

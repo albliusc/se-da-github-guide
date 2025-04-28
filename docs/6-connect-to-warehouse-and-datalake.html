@@ -230,13 +230,17 @@ ul.task-list li input[type="checkbox"] {
 <li><p>Power BI Click on “Get data from other source —&gt;” and then select <em>Azure Synapse Analytics SQL</em> from the list <img src="docs/pics/image-2.png" class="img-fluid" alt="alt text"></p></li>
 <li><p>DataBricks Follow the instructions here <a href="https://nhs.sharepoint.com/sites/msteams_793886-SouthEast/Shared%20Documents/South%20East/L&amp;D/Databricks/Introduction%20to%20Databricks.pptx?web=1">Link</a>. The example below for the APCS_Core_Daily SUS table.</p>
 <blockquote class="blockquote">
-<p>`` lakeName = “udalstdatacuratedprod.dfs.core.windows.net” # lake name</p>
-<p>containerName = “restricted” # high level folder</p>
-<p>fileLoc = “/patientlevel/MESH/APC/APCS_Core_Daily/” # folder where dataset is housed in azure</p>
-<p>path = “abfss://”+containerName+“@”+lakeName+fileLoc</p>
-<p>df = spark.read.option(“header”, “true”)<br>
-.option(“recursiveFileLookup”, “True”)<br>
-.parquet(path) ```</p>
+<pre><code>lakeName = "udalstdatacuratedprod.dfs.core.windows.net"      # lake name
+
+containerName = "restricted"                                 # high level folder
+
+fileLoc = "/patientlevel/MESH/APC/APCS_Core_Daily/"          # folder where dataset is housed in azure
+
+path = "abfss://"+containerName+"@"+lakeName+fileLoc
+
+df = spark.read.option("header", "true") \
+               .option("recursiveFileLookup", "True") \
+               .parquet(path)</code></pre>
 </blockquote></li>
 <li><p>R Use the script below</p>
 <blockquote class="blockquote">
@@ -277,59 +281,97 @@ DBI::dbDisconnect(con_udal)</code></pre>
 <li><p>Tableau Click on More and choose <em>Azure Data Lake Storage Gen2</em> <img src="docs/pics/image-4.png" class="img-fluid" alt="alt text"></p></li>
 <li><p>Excel In the <em>Data</em> tab, “Get Data” &gt; “From Azure” &gt; “From Azure Data Lake Storage Gen2” <img src="docs/pics/image-5.png" class="img-fluid" alt="alt text"></p></li>
 <li><p>Power BI Click on “Get data from other source —&gt;” and then select <em>Azure Data Lake Storage Gen2</em> from the list <img src="docs/pics/image-6.png" class="img-fluid" alt="alt text"></p></li>
-<li><p>DataBricks Use the example script below.</p>
+<li><p>DataBricks Use the example script below to read an existing <em>csv</em> file.</p>
 <blockquote class="blockquote">
-<pre><code>my_df = spark.read.csv(
-    "abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/Test.csv"     # this is the _direct file URL_
+<pre><code>### use the direct URL to the file you want to read instead of the exapmle URL
+my_df = spark.read.csv(
+    "abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/Test.csv"     
     , header="true")
 
-display(my_df)                          # to visualise the table stored in my_df dataframe</code></pre>
+# to visualise the table stored in my_df dataframe
+display(my_df)</code></pre>
+</blockquote></li>
+<li><p>R Use the script below to read an existing <em>coalesced</em> <em>csv</em> file</p>
+<blockquote class="blockquote">
+<pre><code># Load libraries
+library(AzureStor)
+library(AzureKeyVault)
+
+## ---- Set Up 
+## this sets the secrets needed to connect to Azure (based on East of England advice December 24)
+## this file (along with config.py) is specifically referred to in gitignore
+
+key_vault_url = "https://udal-kv-stsas-prod.vault.azure.net/" # keep this as is
+
+team_secret = "alp-analytics-projects-SEAnalytics-w"  
+# the -w at the end means it's picking up the secret with WRITE permissions, if you do -r this is READ ONLY so can limit you.
+
+lake_url = "https://udalstdataanalysisprod.dfs.core.windows.net" # keep this as is
+
+storage_container_name = "analytics-projects" # keep this as is
+
+
+# #set file name to be brought into R (i.e. the file that's in the storage explorer)
+# # this file gets updated by a Databricks process with timestamped reference versions stored separately
+
+filenamecsv = "SEAnalytics/Alberto/Test.csv"
+    
+
+# Ingest the data
+# ------------------------------------------------------------------------------
+
+# load secrets -----------------------------------------------------------------
+## see separate configR.R (excluded using gitignore)
+
+# Get Shared Access Signature auth for data
+# Opens an interactive Azure authentication flow in your browser
+vault &lt;- key_vault(key_vault_url)
+
+# Read from specific lake area
+# Gets the SAS for the relevant data - r = read access, w = write access
+sas_token &lt;- vault$secrets$get(team_secret)
+
+# Set connection settings
+storage_account &lt;- storage_endpoint(lake_url, 
+                                    sas = sas_token$value)
+
+container &lt;- storage_container(storage_account, storage_container_name)</code></pre>
 </blockquote></li>
 </ul>
 <!--- NOT DONE YET --->
 <!---              --->
-<ul>
-<li><p>R Use the script below</p>
-<blockquote class="blockquote">
-<pre><code># Establish UDAL connections ----------------------------------------------
-# insert your UDAL user ID
-library(svDialogs)
-uid &lt;- dlgInput("Enter udal ID", Sys.info()["user"])$res
-
-# establish connection to UDAL
-con_udal &lt;- DBI::dbConnect(drv = odbc::odbc(),
-                       driver = "ODBC Driver 17 for SQL Server",
-                       server = "udalsyndataprod.sql.azuresynapse.net",
-                       database = "UDAL_Warehouse",
-                       UID = uid,
-                       authentication = "ActiveDirectoryInteractive")
-
-# import data ----------------------------------------------------------
-# in this example we use a query to define the data to pull
-string_sql &lt;- readr::read_file("data/udal queries/sql_query_udal.txt")
-df_data &lt;- DBI::dbGetQuery(conn = con_udal, statement = string_sql)
-
-# Close connection --------------------------------------------------------
-DBI::dbDisconnect(con_udal)</code></pre>
-</blockquote></li>
-</ul>
 </section>
 <section id="how-to-write-in-the-lakemart" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-write-in-the-lakemart">How to <em>write</em> in the LakeMart</h3>
 <ul>
-<li><p>DataBricks Follow the instructions given by Charlotte in the DataBricks L&amp;D session (example below for the https://udalstdatacuratedprod.dfs.core.windows.net/restricted/patientlevel/MESH/APC/APCS_Core_Daily/ table)</p>
+<li><p>DataBricks To save a dataframe/table as a csv file, use the script below</p>
 <blockquote class="blockquote">
-<pre><code>lakeName = "udalstdatacuratedprod.dfs.core.windows.net"      # lake name
+<pre><code># Create a coalesced output csv file
+my_df.coalesce(1).write.mode('overwrite').option("header", "true").csv(
+    "abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/"
+)
 
-containerName = "restricted"      # high level folder
+# Step 1: List the files in the folder where the coalesced output is saved
+files = dbutils.fs.ls("abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/")
 
-fileLoc = "/patientlevel/MESH/APC/APCS_Core_Daily/"      # folder where dataset is housed in azure
+# Step 2: Find the single file (i.e. the one that has been produced)
+# Filter for part files (e.g., part-00000...)
+part_files = [f for f in files if f.path.startswith('abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/part-')]
 
-path = "abfss://"+containerName+"@"+lakeName+fileLoc
+# Step 3: Sort part files by modification time to get the latest one (there should only be one as it's coalesced)
+latest_file = max(part_files, key=lambda f: f.modificationTime)
 
-df = spark.read.option("header", "true") \
-               .option("recursiveFileLookup", "True") \
-               .parquet(path)</code></pre>
+# Step 4: Rename the csv file with a dynamic timestamp
+timestamp = datetime.now().strftime("%Y-%m-%d")
+destination_file = f"abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/Test.csv"
+
+# Step 5: Move the file to the final destination
+dbutils.fs.mv(latest_file.path, destination_file)
+
+# Step 6: Delete files created as by-product
+underscore_files = [f for f in files if f.path.startswith('abfss://analytics-projects@udalstdataanalysisprod.dfs.core.windows.net/SEAnalytics/Alberto/_')]
+for file in underscore_files:
+    dbutils.fs.rm(file.path)</code></pre>
 </blockquote></li>
 </ul>
 
