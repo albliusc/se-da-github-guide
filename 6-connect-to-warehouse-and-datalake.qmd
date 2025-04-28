@@ -1,0 +1,169 @@
+## How to connect to the **UDAL Warehouse**
+
+To connect to the UDAL data warehouse, you need to select *Azure Synapse Analytics* as datasource.
+
+When prompted, fill the Server and Database fields using teh folowing:
+> **Server:** *udalsyndataprod.sql.azuresynapse.net*
+> **Database:**  *UDAL_Warehouse*
+
+Use your UDAL username and password to finalise the connection.
+
+
+* Tableau
+    Click on More and choose *Azure Synapse Analytics*
+    ![alt text](docs/pics/image.png)
+    
+
+* Excel
+    In the *Data* tab, "Get Data" > "From Azure" > "From Azure Synapse Analytics"
+    ![alt text](docs/pics/image-1.png)
+    
+
+* Power BI
+    Click on "Get data from other source --->" and then select *Azure Synapse Analytics SQL* from the list
+    ![alt text](docs/pics/image-2.png)
+
+
+* DataBricks
+    Follow the instructions given by Charlotte in the DataBricks L&D session (example below for the https://udalstdatacuratedprod.dfs.core.windows.net/restricted/patientlevel/MESH/APC/APCS_Core_Daily/ table)
+    
+    > ```
+    > lakeName = "udalstdatacuratedprod.dfs.core.windows.net"      *\# lake name*
+    >
+    > containerName = "restricted"      *\# high level folder*
+    >
+    > fileLoc = "/patientlevel/MESH/APC/APCS_Core_Daily/"      *\# folder where dataset is housed in azure*
+    >
+    > path = "abfss://"+containerName+"@"+lakeName+fileLoc
+    >
+    > df = spark.read.option("header", "true") \\
+    >                .option("recursiveFileLookup", "True") \\
+    >                .parquet(path)
+    >```
+    
+    
+* R
+    Use the script below
+    
+    > ```
+    > \# Establish UDAL connections ----------------------------------------------
+    > \# insert your UDAL user ID
+    > library(svDialogs)
+    > uid <- dlgInput("Enter udal ID", Sys.info()["user"])$res
+    > 
+    > \# establish connection to UDAL
+    > con_udal <- DBI::dbConnect(drv = odbc::odbc(),
+    >                        driver = "ODBC Driver 17 for SQL Server",
+    >                        server = "udalsyndataprod.sql.azuresynapse.net",
+    >                        database = "UDAL_Warehouse",
+    >                        UID = uid,
+    >                        authentication = "ActiveDirectoryInteractive")
+    > 
+    > \# import data ----------------------------------------------------------
+    > \# in this example we use a query to define the data to pull
+    > string_sql <- readr::read_file("data/udal queries/sql_query_udal.txt")
+    > df_data <- DBI::dbGetQuery(conn = con_udal, statement = string_sql)
+    > 
+    > \# Close connection --------------------------------------------------------
+    > DBI::dbDisconnect(con_udal)
+    > ```
+    
+**NOTE: R will open a window _in the background_ to enter the UDAL credentials, without any notification!!!**
+
+
+
+
+## How to connect to the **SE D&A LakeMart**
+
+### How to _read_ an existing file from the LakeMart
+
+To connect to the SE D&A LakeMart, you need to select *Azure Data Lake Storage Gen2* as datasource.
+
+When prompted, enter the endpoint URL (ex. *https://udalstdataanalysisprod.dfs.core.windows.net/*) to browse through the files available to you, or if you have a direct File URL (ex. *https://udalstdataanalysisprod.dfs.core.windows.net/analytics-projects/SEAnalytics/Alberto/Test.csv*)
+
+**NOTE: to obtain the file URL, browse to the file in the _Microsoft Azure Storage Explorer_, right-click on the file, click on "Copy URL" and then "With DFS Endpoint"**
+![alt text](docs/pics/image-3.png)
+
+**NOTE: Using the endpoint URL does not work for me, however I have no issues using the direct file URL**
+
+Use your UDAL username and password to finalise the connection.
+
+
+* Tableau
+    Click on More and choose *Azure Data Lake Storage Gen2*
+    ![alt text](docs/pics/image-4.png)
+
+* Excel
+    In the *Data* tab, "Get Data" > "From Azure" > "From Azure Data Lake Storage Gen2"
+    ![alt text](docs/pics/image-5.png)
+
+* Power BI
+    Click on "Get data from other source --->" and then select *Azure Data Lake Storage Gen2* from the list
+    ![alt text](docs/pics/image-6.png)
+
+
+<!--- NOT DONE YET --->
+<!---              --->
+* DataBricks
+    Follow the instructions here [Link](https://nhs.sharepoint.com/sites/msteams_793886-SouthEast/Shared%20Documents/South%20East/L&D/Databricks/Introduction%20to%20Databricks.pptx?web=1).
+    The example below for the APCS_Core_Daily SUS table.
+    
+    > ```
+    > lakeName = "udalstdatacuratedprod.dfs.core.windows.net"      *\# lake name*
+    >
+    > containerName = "restricted"      *\# high level folder*
+    >
+    > fileLoc = "/patientlevel/MESH/APC/APCS_Core_Daily/"      *\# folder where dataset is housed in azure*
+    >
+    > path = "abfss://"+containerName+"@"+lakeName+fileLoc
+    >
+    > df = spark.read.option("header", "true") \\
+    >                .option("recursiveFileLookup", "True") \\
+    >                .parquet(path)
+    >```
+
+* R
+    Use the script below
+    
+    > ```
+    > \# Establish UDAL connections ----------------------------------------------
+    > \# insert your UDAL user ID
+    > library(svDialogs)
+    > uid <- dlgInput("Enter udal ID", Sys.info()["user"])$res
+    > 
+    > \# establish connection to UDAL
+    > con_udal <- DBI::dbConnect(drv = odbc::odbc(),
+    >                        driver = "ODBC Driver 17 for SQL Server",
+    >                        server = "udalsyndataprod.sql.azuresynapse.net",
+    >                        database = "UDAL_Warehouse",
+    >                        UID = uid,
+    >                        authentication = "ActiveDirectoryInteractive")
+    > 
+    > \# import data ----------------------------------------------------------
+    > \# in this example we use a query to define the data to pull
+    > string_sql <- readr::read_file("data/udal queries/sql_query_udal.txt")
+    > df_data <- DBI::dbGetQuery(conn = con_udal, statement = string_sql)
+    > 
+    > \# Close connection --------------------------------------------------------
+    > DBI::dbDisconnect(con_udal)
+    > ```
+
+
+### How to _write_ in the LakeMart
+
+* DataBricks
+    Follow the instructions given by Charlotte in the DataBricks L&D session (example below for the https://udalstdatacuratedprod.dfs.core.windows.net/restricted/patientlevel/MESH/APC/APCS_Core_Daily/ table)
+    
+    > ```
+    > lakeName = "udalstdatacuratedprod.dfs.core.windows.net"      *\# lake name*
+    >
+    > containerName = "restricted"      *\# high level folder*
+    >
+    > fileLoc = "/patientlevel/MESH/APC/APCS_Core_Daily/"      *\# folder where dataset is housed in azure*
+    >
+    > path = "abfss://"+containerName+"@"+lakeName+fileLoc
+    >
+    > df = spark.read.option("header", "true") \\
+    >                .option("recursiveFileLookup", "True") \\
+    >                .parquet(path)
+    >```
